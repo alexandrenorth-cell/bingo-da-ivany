@@ -1,0 +1,328 @@
+// Bingo da Ivany V3 - JavaScript
+(()=>{
+'use strict';
+window.addEventListener('error',()=>{const n=document.querySelector('.tiny-note');if(n&&!window.BingoIvanyStart){n.textContent='O navegador bloqueou o jogo. Abra o endereço publicado diretamente no Safari.';n.style.color='#b42347';n.style.fontWeight='900'}});
+
+const STORAGE_KEY='bingo-da-ivany-v3',AUTO_INTERVAL=5000,HINT_DELAY=1800,VIRTUAL_NAMES=['Ana','José','Maria','Carlos','Teresa','Paulo','Lúcia','João','Cida'];
+const els={
+soundBtn:document.getElementById('soundBtn'),currentBall:document.getElementById('currentBall'),heroTitle:document.getElementById('heroTitle'),heroMessage:document.getElementById('heroMessage'),countdownBar:document.getElementById('countdownBar'),drawnCount:document.getElementById('drawnCount'),markedCount:document.getElementById('markedCount'),missingCount:document.getElementById('missingCount'),missingLabel:document.getElementById('missingLabel'),ticketCode:document.getElementById('ticketCode'),ticketSectionTitle:document.getElementById('ticketSectionTitle'),ticket:document.getElementById('ticket'),cartelaTabs:document.getElementById('cartelaTabs'),cartelaSwipe:document.getElementById('cartelaSwipe'),historyRow:document.getElementById('historyRow'),modeLabel:document.getElementById('modeLabel'),milestone1:document.getElementById('milestone1'),milestone2:document.getElementById('milestone2'),milestone3:document.getElementById('milestone3'),newGameBtn:document.getElementById('newGameBtn'),mainBtn:document.getElementById('mainBtn'),welcomeOverlay:document.getElementById('welcomeOverlay'),welcomePlayBtn:document.getElementById('welcomePlayBtn'),resumeBtn:document.getElementById('resumeBtn'),escolhaOverlay:document.getElementById('escolhaOverlay'),escolhaAutoBtn:document.getElementById('escolhaAutoBtn'),escolhaManualBtn:document.getElementById('escolhaManualBtn'),celebrationOverlay:document.getElementById('celebrationOverlay'),celebrationIcon:document.getElementById('celebrationIcon'),celebrationTitle:document.getElementById('celebrationTitle'),celebrationText:document.getElementById('celebrationText'),celebrationContinueBtn:document.getElementById('celebrationContinueBtn'),playersPanel:document.getElementById('playersPanel'),playersHeader:document.getElementById('playersHeader'),playersList:document.getElementById('playersList'),toast:document.getElementById('toast')
+};
+
+let state=blankState(),autoTimer=null,countdownFrame=null,hintTimer=null,nextDrawAt=0,toastTimer=null,wakeLock=null,escolhaCount=1,startLock=false;
+
+function blankState(){return{version:3,cartelasCount:1,ivanyCartelas:[],ivanyCartelaIds:[],markedByCartela:[],virtualPlayers:[],drawPile:[],drawn:[],mode:'manual',started:false,paused:true,sound:true,activeCartelaIndex:0,conquistas:[],conquistasClaimed:{one:false,two:false,full:false}}}
+function range(s,e){return Array.from({length:e-s+1},(_,i)=>s+i)}
+function shuffle(a){const arr=[...a];for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}return arr}
+function sample(a,n){return shuffle(a).slice(0,n)}
+function randomFrom(a){return a[Math.floor(Math.random()*a.length)]}
+
+function generateTicket(){
+let mask,cc;
+do{mask=Array.from({length:3},()=>{const c=new Set(sample(range(0,8),5));return Array.from({length:9},(_,col)=>c.has(col))});cc=Array.from({length:9},(_,col)=>mask.reduce((s,r)=>s+(r[col]?1:0),0))}while(cc.some(c=>c===0));
+const t=Array.from({length:3},()=>Array(9).fill(null));
+for(let col=0;col<9;col++){const min=col===0?1:col*10,max=col===8?90:col*10+9;const rows=range(0,2).filter(r=>mask[r][col]);const nums=sample(range(min,max),rows.length).sort((a,b)=>a-b);rows.forEach((r,i)=>{t[r][col]=nums[i]})}
+return t;
+}
+function ticketToKey(t){return t.flat().filter(Number.isInteger).sort((a,b)=>a-b).join(',')}
+function generateUniqueTickets(n,existingKeys){
+const tickets=[],keys=new Set(existingKeys||[]);
+for(let i=0;i<n;i++){let t,k,a=0;do{t=generateTicket();k=ticketToKey(t);a++}while(keys.has(k)&&a<200);keys.add(k);tickets.push({ticket:t,ticketId:String(Math.floor(100000+Math.random()*900000)),key:k})}
+return tickets;
+}
+
+function completedRowsForTicket(ticket,marked){let c=0;for(const row of ticket){const nums=row.filter(Number.isInteger);if(nums.length===5&&nums.every(n=>marked.includes(n)))c++}return c}
+
+function checkAllConquistas(silent){
+if(state.conquistasClaimed.full)return;
+const drawnSet=new Set(state.drawn),newC=[];
+for(let i=0;i<state.ivanyCartelas.length;i++){const t=state.ivanyCartelas[i].ticket;const md=t.flat().filter(n=>Number.isInteger(n)&&drawnSet.has(n));const rows=completedRowsForTicket(t,md);const key='ivany_'+i;
+if(rows>=3&&!state.conquistasClaimed.full)newC.push({type:'full',cartelaIndex:i,playerName:'Ivany',playerKey:key,cartelaLabel:i+1});
+else if(rows>=2&&!state.conquistasClaimed.two&&!state.conquistas.some(c=>c.type==='two'))newC.push({type:'two',cartelaIndex:i,playerName:'Ivany',playerKey:key,cartelaLabel:i+1});
+else if(rows>=1&&!state.conquistasClaimed.one&&!state.conquistas.some(c=>c.type==='one'))newC.push({type:'one',cartelaIndex:i,playerName:'Ivany',playerKey:key,cartelaLabel:i+1});
+}
+for(const vp of state.virtualPlayers){const md=vp.ticket.flat().filter(n=>Number.isInteger(n)&&drawnSet.has(n));const rows=completedRowsForTicket(vp.ticket,md);const key='vp_'+vp.name;
+if(rows>=3&&!state.conquistasClaimed.full)newC.push({type:'full',playerName:vp.name,playerKey:key});
+else if(rows>=2&&!state.conquistasClaimed.two&&!state.conquistas.some(c=>c.type==='two'))newC.push({type:'two',playerName:vp.name,playerKey:key});
+else if(rows>=1&&!state.conquistasClaimed.one&&!state.conquistas.some(c=>c.type==='one'))newC.push({type:'one',playerName:vp.name,playerKey:key});
+}
+const byType={};
+for(const c of newC){if(!byType[c.type])byType[c.type]=[];if(!byType[c.type].find(x=>x.playerKey===c.playerKey))byType[c.type].push(c)}
+const priority=['full','two','one'];
+for(const type of priority){if(state.conquistasClaimed[type])continue;if(byType[type]&&byType[type].length>0){const winners=byType[type];for(const w of winners)state.conquistas.push(w);state.conquistasClaimed[type]=true;
+if(type==='full'){state.conquistasClaimed.two=true;state.conquistasClaimed.one=true}else if(type==='two'){state.conquistasClaimed.one=true}
+if(!silent)showConquistaCelebration(type,winners);break}}
+}
+
+function showConquistaCelebration(type,winners){
+state.paused=true;clearTimers();saveState();
+const iw=winners.filter(w=>w.playerName==='Ivany'),vw=winners.filter(w=>w.playerName!=='Ivany'),isIv=iw.length>0,isB=type==='full';
+let title,icon,text,voice;
+if(isB){icon='👑';
+if(isIv){const ls=iw.map(w=>'Cartela '+w.cartelaLabel).join(' e ');title='BINGO!';text='Ivany completou a '+ls+'! Hoje a coroa do bingo é toda sua.';voice='Bingo! Parabéns, Ivany! Você completou a cartela!'}
+else{const ns=winners.map(w=>w.playerName).join(' e ');title='Bingo!';text=ns+' '+(winners.length>1?'fizeram':'fez')+' bingo desta vez. Vamos para outra?';voice='Bingo! '+ns+' '+(winners.length>1?'completaram':'completou')+' a cartela!'}}
+else if(type==='two'){icon='🎉';
+if(isIv){const ls=iw.map(w=>'Cartela '+w.cartelaLabel).join(' e ');title='DUAS LINHAS!';text='Ivany fez duas linhas na '+ls+'! A festa cresceu!';voice='Duas linhas! Parabéns, Ivany!'}
+else{const ns=winners.map(w=>w.playerName).join(' e ');title='Duas Linhas!';text=ns+' '+(winners.length>1?'completaram':'completou')+' duas linhas! A disputa continua.';voice=ns+' '+(winners.length>1?'completaram':'completou')+' duas linhas!'}}
+else{icon='🌟';
+if(isIv){const ls=iw.map(w=>'Cartela '+w.cartelaLabel).join(' e ');title='LINHA!';text='Ivany completou uma linha na '+ls+'! Agora vamos buscar duas linhas.';voice='Linha! Muito bem, Ivany!'}
+else{const ns=winners.map(w=>w.playerName).join(' e ');title='Linha!';text=ns+' '+(winners.length>1?'completaram':'completou')+' uma linha! A disputa continua.';voice=ns+' '+(winners.length>1?'completaram':'completou')+' uma linha!'}}
+els.celebrationIcon.textContent=icon;els.celebrationTitle.textContent=title;els.celebrationText.textContent=text;
+els.celebrationContinueBtn.textContent=isB?'Jogar novamente':'Continuar o jogo';
+els.celebrationOverlay.dataset.isBingo=isB?'1':'0';els.celebrationOverlay.classList.remove('hidden');
+speak(voice,true);launchConfetti(isB?140:isIv?65:35);
+}
+
+function closeCelebrationAndContinue(){
+const isB=els.celebrationOverlay.dataset.isBingo==='1';els.celebrationOverlay.classList.add('hidden');
+if(isB){startNewGame(state.mode||'auto');return}
+if(state.mode==='auto'){state.paused=false;scheduleAutoDraw()}renderAll();saveState();
+}
+
+function missingForActiveCartela(){
+const t=state.ivanyCartelas[state.activeCartelaIndex];if(!t)return{count:5,label:'P/ uma linha'};
+const marked=state.markedByCartela[state.activeCartelaIndex]||[];
+const mpR=t.ticket.map(row=>{const nums=row.filter(Number.isInteger);return nums.filter(n=>!marked.includes(n)).length}).sort((a,b)=>a-b);
+const rows=completedRowsForTicket(t.ticket,marked);
+if(rows===0)return{count:mpR[0],label:'P/ uma linha'};if(rows===1)return{count:mpR[0]+mpR[1],label:'P/ duas linhas'};
+return{count:mpR.reduce((a,b)=>a+b,0),label:'P/ bingo'};
+}
+
+function saveState(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}catch(e){}}
+function loadSavedState(){try{const r=localStorage.getItem(STORAGE_KEY);if(!r)return null;const p=JSON.parse(r);return(p&&p.version===3&&Array.isArray(p.ivanyCartelas)&&Array.isArray(p.drawPile))?p:null}catch(e){return null}}
+
+function clearAutoTimers(){if(autoTimer)window.clearTimeout(autoTimer);if(countdownFrame)cancelAnimationFrame(countdownFrame);autoTimer=null;countdownFrame=null;els.countdownBar.style.width='0%'}
+function clearTimers(){clearAutoTimers();if(hintTimer)window.clearTimeout(hintTimer);hintTimer=null}
+
+function requestWakeLock(){try{if(!navigator.wakeLock||typeof navigator.wakeLock.request!=='function'||document.visibilityState!=='visible')return;const r=navigator.wakeLock.request('screen');if(!r||typeof r.then!=='function')return;r.then(l=>{wakeLock=l;if(l&&typeof l.addEventListener==='function')l.addEventListener('release',()=>{wakeLock=null})}).catch(()=>{})}catch(e){}}
+
+function startNewGame(mode){
+if(startLock)return;startLock=true;window.setTimeout(()=>{startLock=false},450);
+clearTimers();
+const count=escolhaCount;
+const allKeys=[];
+const ivanyData=generateUniqueTickets(count,allKeys);
+allKeys.push(...ivanyData.map(d=>d.key));
+const vpData=generateUniqueTickets(9,allKeys);
+allKeys.push(...vpData.map(d=>d.key));
+state={version:3,cartelasCount:count,ivanyCartelas:ivanyData,ivanyCartelaIds:ivanyData.map(d=>d.ticketId),markedByCartela:ivanyData.map(()=>[]),virtualPlayers:VIRTUAL_NAMES.map((name,i)=>({name,ticket:vpData[i].ticket,ticketId:vpData[i].ticketId})),drawPile:shuffle(range(1,90)),drawn:[],mode,sound:state.sound,started:true,paused:mode!=='auto',activeCartelaIndex:0,conquistas:[],conquistasClaimed:{one:false,two:false,full:false}};
+els.escolhaOverlay.classList.add('hidden');els.welcomeOverlay.classList.add('hidden');
+renderAll();saveState();requestWakeLock();
+speak('Bem-vinda, Ivany. Vamos jogar!');showToast(mode==='auto'?'Sorteio automático ligado':'Você comanda o sorteio');
+if(mode==='auto'){state.paused=false;renderControls();autoTimer=window.setTimeout(()=>{drawNext();scheduleAutoDraw()},1100)}
+}
+
+function resumeGame(){
+const saved=loadSavedState();if(!saved)return;clearTimers();state=saved;state.paused=true;
+els.welcomeOverlay.classList.add('hidden');els.escolhaOverlay.classList.add('hidden');
+renderAll();saveState();requestWakeLock();showToast('Partida retomada');
+}
+
+function drawNext(){
+if(!state.started||state.drawPile.length===0||state.conquistasClaimed.full)return;
+clearHint();const number=state.drawPile.shift();state.drawn.push(number);animateCurrentBall(number);speak('Número '+number);
+const onAnyCartela=state.ivanyCartelas.some(ct=>ct.ticket.flat().filter(Number.isInteger).includes(number));
+els.heroTitle.textContent='Número '+number;
+els.heroMessage.textContent=onAnyCartela?'Ele está em uma das suas cartelas. Procure o brilho!':encouragementMessage();
+renderAll();saveState();
+if(onAnyCartela){hintTimer=window.setTimeout(()=>highlightAvailable(number),HINT_DELAY)}
+checkAllConquistas(false);
+if(state.drawPile.length===0&&!state.conquistasClaimed.full){state.paused=true;clearTimers();els.heroMessage.textContent='Todas as bolas foram sorteadas.';showToast('Fim das 90 bolas')}
+}
+
+function scheduleAutoDraw(){
+clearAutoTimers();
+if(state.mode!=='auto'||state.paused||state.conquistasClaimed.full||state.drawPile.length===0){renderControls();return}
+nextDrawAt=performance.now()+AUTO_INTERVAL;updateCountdown();
+autoTimer=window.setTimeout(()=>{drawNext();scheduleAutoDraw()},AUTO_INTERVAL);renderControls();
+}
+
+function updateCountdown(){
+if(state.mode!=='auto'||state.paused){els.countdownBar.style.width='0%';return}
+const remaining=Math.max(0,nextDrawAt-performance.now());const progress=100-(remaining/AUTO_INTERVAL)*100;
+els.countdownBar.style.width=Math.min(100,Math.max(0,progress))+'%';
+if(remaining>0)countdownFrame=requestAnimationFrame(updateCountdown);
+}
+
+function toggleMainAction(){
+if(!state.started){els.escolhaOverlay.classList.remove('hidden');return}
+if(state.mode==='manual'){drawNext();return}
+state.paused=!state.paused;saveState();
+if(state.paused){clearTimers();showToast('Sorteio pausado')}else{showToast('Sorteio retomado');scheduleAutoDraw()}renderControls();
+}
+
+function handleCellTap(number,cell){
+if(!Number.isInteger(number)||!state.started)return;
+if(!state.drawn.includes(number)){cell.classList.remove('wrong');void cell.offsetWidth;cell.classList.add('wrong');showToast('Esse número ainda não saiu 😉');return}
+const ci=state.activeCartelaIndex;const marked=state.markedByCartela[ci]||[];
+if(marked.includes(number)){showToast('Esse já está marcado ✅');return}
+state.markedByCartela[ci]=[...marked,number];
+speak(randomFrom(['Boa!','Achou!','Mandou bem!','Na cartela!']));showToast(randomFrom(['Boa, Ivany! ✨','Achou! 🎯','Muito bem! 🌟','Número marcado! ✅']));
+renderAll();saveState();
+}
+
+function switchCartela(index){
+if(index===state.activeCartelaIndex||index<0||index>=state.ivanyCartelas.length)return;
+state.activeCartelaIndex=index;renderAll();saveState();
+}
+
+function renderAll(){
+renderTicket();renderCartelaTabs();renderHistory();renderStats();renderMilestones();renderControls();renderSound();renderPlayers();
+const last=state.drawn[state.drawn.length-1];const hasLast=Number.isInteger(last);
+els.currentBall.textContent=hasLast?last:'–';els.currentBall.style.color=hasLast?ballColor(last):'';
+if(state.ivanyCartelas.length>0&&state.ivanyCartelas[state.activeCartelaIndex]){
+els.ticketCode.textContent='Cartela #'+state.ivanyCartelas[state.activeCartelaIndex].ticketId;
+els.ticketSectionTitle.textContent='Suas cartelas';
+}
+}
+
+function renderTicket(){
+els.ticket.innerHTML='';
+if(!state.ivanyCartelas.length){const preview=generateTicket();preview.forEach((row,ri)=>renderTicketRow(row,ri,true,[]));return}
+const ct=state.ivanyCartelas[state.activeCartelaIndex];if(!ct)return;
+const marked=state.markedByCartela[state.activeCartelaIndex]||[];
+ct.ticket.forEach((row,ri)=>renderTicketRow(row,ri,false,marked));
+}
+
+function renderTicketRow(row,ri,preview,marked){
+row.forEach((number,ci)=>{
+const cell=document.createElement('button');cell.type='button';cell.className='number-cell';cell.setAttribute('role','gridcell');
+cell.dataset.row=String(ri);cell.dataset.col=String(ci);
+if(!Number.isInteger(number)){cell.classList.add('blank');cell.disabled=true;cell.setAttribute('aria-label','Espaço vazio')}
+else{cell.textContent=String(number);cell.setAttribute('aria-label','Número '+number);
+const isMarked=!preview&&marked.includes(number);const isAvailable=!preview&&state.drawn.includes(number)&&!isMarked;
+if(isMarked)cell.classList.add('marked');if(isAvailable)cell.classList.add('available');
+cell.addEventListener('click',()=>handleCellTap(number,cell))}
+els.ticket.appendChild(cell);
+});
+}
+
+function renderCartelaTabs(){
+els.cartelaTabs.innerHTML='';
+if(state.ivanyCartelas.length<=1)return;
+const drawnSet=new Set(state.drawn);
+state.ivanyCartelas.forEach((ct,i)=>{
+const tab=document.createElement('button');tab.className='cartela-tab'+(i===state.activeCartelaIndex?' active':'');
+const marked=state.markedByCartela[i]||[];
+const pending=ct.ticket.flat().filter(n=>Number.isInteger(n)&&drawnSet.has(n)&&!marked.includes(n)).length;
+tab.innerHTML='Cartela '+(i+1)+(pending>0?' <span class="pending-dot">'+pending+'</span>':'');
+tab.addEventListener('click',()=>switchCartela(i));
+els.cartelaTabs.appendChild(tab);
+});
+}
+
+function renderPlayers(){
+els.playersList.innerHTML='';
+const drawnSet=new Set(state.drawn);
+const allPlayers=[];
+for(let i=0;i<state.ivanyCartelas.length;i++){
+const ct=state.ivanyCartelas[i];const marked=state.markedByCartela[i]||[];
+const autoMarked=ct.ticket.flat().filter(n=>Number.isInteger(n)&&drawnSet.has(n));
+const markedCount=Math.max(marked.length,autoMarked.length);
+const rows=completedRowsForTicket(ct.ticket,autoMarked);
+allPlayers.push({name:'Ivany'+(state.ivanyCartelas.length>1?' (C'+(i+1)+')':''),marked:markedCount,total:15,rows,isIvany:true});
+}
+for(const vp of state.virtualPlayers){
+const autoMarked=vp.ticket.flat().filter(n=>Number.isInteger(n)&&drawnSet.has(n));
+const rows=completedRowsForTicket(vp.ticket,autoMarked);
+allPlayers.push({name:vp.name,marked:autoMarked.length,total:15,rows,isIvany:false});
+}
+allPlayers.sort((a,b)=>b.marked-a.marked);
+for(const p of allPlayers){
+const row=document.createElement('div');
+row.className='player-row'+(p.isIvany?' ivany':'')+(p.rows>=3?' won':'');
+row.innerHTML='<span>'+(p.isIvany?'⭐ ':'')+p.name+'</span><span class="player-status">'+p.marked+' de '+p.total+'</span>';
+els.playersList.appendChild(row);
+}
+}
+
+function renderHistory(){
+els.historyRow.innerHTML='';
+if(!state.drawn.length){const e=document.createElement('span');e.className='history-empty';e.textContent='Os números sorteados aparecem aqui.';els.historyRow.appendChild(e);return}
+[...state.drawn].reverse().slice(0,14).forEach(number=>{const b=document.createElement('div');b.className='mini-ball';b.textContent=String(number);b.style.background=ballColor(number);b.setAttribute('aria-label','Número sorteado '+number);els.historyRow.appendChild(b)});
+}
+
+function renderStats(){
+const activeMarked=(state.markedByCartela[state.activeCartelaIndex]||[]).length;
+const missing=state.ivanyCartelas.length?missingForActiveCartela():{count:5,label:'P/ uma linha'};
+const sortedLabel=state.drawn.length===1?'1 número sorteado':state.drawn.length+' números sorteados';
+els.drawnCount.textContent=sortedLabel;
+els.markedCount.textContent=activeMarked+' / 15';
+els.missingCount.textContent=String(missing.count);els.missingLabel.textContent=missing.label;
+}
+
+function renderMilestones(){
+const hasIvanyOne=state.conquistas.some(c=>c.type==='one'&&c.playerName==='Ivany');
+const hasIvanyTwo=state.conquistas.some(c=>c.type==='two'&&c.playerName==='Ivany');
+const hasIvanyFull=state.conquistas.some(c=>c.type==='full'&&c.playerName==='Ivany');
+const hasOtherOne=state.conquistas.some(c=>c.type==='one'&&c.playerName!=='Ivany');
+const hasOtherTwo=state.conquistas.some(c=>c.type==='two'&&c.playerName!=='Ivany');
+const hasOtherFull=state.conquistas.some(c=>c.type==='full'&&c.playerName!=='Ivany');
+function setMs(el,isDone,isOther){el.classList.remove('done','claimed-by-other');if(isDone)el.classList.add('done');else if(isOther)el.classList.add('claimed-by-other')}
+setMs(els.milestone1,hasIvanyOne,hasOtherOne);
+setMs(els.milestone2,hasIvanyTwo,hasOtherTwo);
+setMs(els.milestone3,hasIvanyFull,hasOtherFull);
+}
+
+function renderControls(){
+if(!state.started){els.mainBtn.textContent='Começar';els.newGameBtn.disabled=true;els.modeLabel.textContent='Aguardando início';return}
+els.newGameBtn.disabled=false;
+if(state.conquistasClaimed.full){els.mainBtn.textContent='Jogar de novo';els.modeLabel.textContent='Bingo completo';return}
+if(state.mode==='auto'){els.mainBtn.textContent=state.paused?'▶ Continuar':'⏸ Pausar';els.modeLabel.textContent=state.paused?'Automático pausado':'Modo automático'}
+else{els.mainBtn.textContent='Sortear número';els.modeLabel.textContent='Modo manual'}
+}
+
+function renderSound(){els.soundBtn.textContent=state.sound?'🔊':'🔇';els.soundBtn.setAttribute('aria-label',state.sound?'Desligar voz':'Ligar voz')}
+
+function animateCurrentBall(number){els.currentBall.textContent=String(number);els.currentBall.style.color=ballColor(number);els.currentBall.classList.remove('pop');void els.currentBall.offsetWidth;els.currentBall.classList.add('pop')}
+
+function highlightAvailable(number){
+const cells=[...els.ticket.querySelectorAll('.number-cell')];
+const cell=cells.find(el=>el.textContent===String(number)&&!el.classList.contains('marked'));
+if(cell){cell.classList.add('available');cell.scrollIntoView({behavior:'smooth',block:'center'})}
+}
+function clearHint(){if(hintTimer)window.clearTimeout(hintTimer);hintTimer=null}
+
+function toggleSound(){state.sound=!state.sound;if(!state.sound&&'speechSynthesis' in window)window.speechSynthesis.cancel();renderSound();saveState();showToast(state.sound?'Voz ligada 🔊':'Voz desligada 🔇');if(state.sound)speak('Voz ligada')}
+
+function speak(text,force){if(!state.sound&&!force)return;if(!('speechSynthesis' in window))return;
+try{window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='pt-BR';u.rate=0.88;u.pitch=1.03;u.volume=1;const voices=window.speechSynthesis.getVoices();const pref=voices.find(v=>/^pt-BR$/i.test(v.lang))||voices.find(v=>/^pt/i.test(v.lang));if(pref)u.voice=pref;window.speechSynthesis.speak(u)}catch(e){}}
+
+function showToast(m){if(toastTimer)window.clearTimeout(toastTimer);els.toast.textContent=m;els.toast.classList.add('show');toastTimer=window.setTimeout(()=>els.toast.classList.remove('show'),1850)}
+
+function launchConfetti(amount){const palette=['#f6bd4b','#ed5d72','#7b3fb3','#30aa8c','#4c8ce8','#ff8a4c'];for(let i=0;i<amount;i++){const piece=document.createElement('div');piece.className='confetti';piece.style.left=Math.random()*100+'vw';piece.style.background=randomFrom(palette);piece.style.setProperty('--fall',(2.1+Math.random()*2.1)+'s');piece.style.setProperty('--drift',(-120+Math.random()*240)+'px');piece.style.setProperty('--spin',(360+Math.random()*1080)+'deg');piece.style.animationDelay=(Math.random()*.65)+'s';piece.style.width=(7+Math.random()*7)+'px';piece.style.height=(10+Math.random()*12)+'px';document.body.appendChild(piece);window.setTimeout(()=>piece.remove(),5000)}}
+
+function ballColor(n){if(n<=9)return'#e55373';if(n<=19)return'#e77b39';if(n<=29)return'#c68c12';if(n<=39)return'#319c63';if(n<=49)return'#238f91';if(n<=59)return'#347dbf';if(n<=69)return'#5563c1';if(n<=79)return'#7b3fb3';return'#b6428b'}
+
+function encouragementMessage(){return randomFrom(['Esse passou voando. O próximo pode ser seu!','A cartela está esquentando.','Olho vivo, Ivany. A sorte está passeando.','Seguimos firmes. Tem número bom vindo aí.','Nada por aqui desta vez. Vamos ao próximo!'])}
+
+function confirmNewGame(){const hasProgress=state.drawn.length>0;if(hasProgress&&!window.confirm('Começar um novo jogo? A partida atual será apagada.'))return;els.escolhaOverlay.classList.remove('hidden')}
+
+window.BingoIvanyStart=(mode)=>{startNewGame(mode)};
+
+els.welcomePlayBtn.addEventListener('click',()=>{els.welcomeOverlay.classList.add('hidden');els.escolhaOverlay.classList.remove('hidden')});
+els.escolhaAutoBtn.addEventListener('click',()=>startNewGame('auto'));
+els.escolhaManualBtn.addEventListener('click',()=>startNewGame('manual'));
+els.resumeBtn.addEventListener('click',resumeGame);
+els.mainBtn.addEventListener('click',()=>{if(state.conquistasClaimed.full)startNewGame(state.mode||'auto');else toggleMainAction()});
+els.newGameBtn.addEventListener('click',confirmNewGame);
+els.soundBtn.addEventListener('click',toggleSound);
+els.celebrationContinueBtn.addEventListener('click',closeCelebrationAndContinue);
+els.playersHeader.addEventListener('click',()=>els.playersPanel.classList.toggle('collapsed'));
+
+document.querySelectorAll('.escolha-btn').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('.escolha-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');escolhaCount=parseInt(btn.dataset.count)})});
+
+let touchStartX=0,touchStartY=0;
+els.cartelaSwipe.addEventListener('touchstart',e=>{touchStartX=e.touches[0].clientX;touchStartY=e.touches[0].clientY},{passive:true});
+els.cartelaSwipe.addEventListener('touchend',e=>{if(state.ivanyCartelas.length<=1)return;const dx=e.changedTouches[0].clientX-touchStartX;const dy=e.changedTouches[0].clientY-touchStartY;if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>50){if(dx<0&&state.activeCartelaIndex<state.ivanyCartelas.length-1)switchCartela(state.activeCartelaIndex+1);else if(dx>0&&state.activeCartelaIndex>0)switchCartela(state.activeCartelaIndex-1)}});
+
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&state.started){requestWakeLock();if(state.mode==='auto'&&!state.paused&&!state.conquistasClaimed.full){scheduleAutoDraw()}}else if(document.visibilityState==='hidden'&&state.mode==='auto'&&!state.paused){state.paused=true;clearTimers();saveState();renderControls()}});
+window.addEventListener('beforeunload',saveState);
+
+const saved=loadSavedState();
+if(saved&&saved.started&&saved.drawn.length>0&&!saved.conquistasClaimed.full){els.resumeBtn.hidden=false;els.resumeBtn.textContent='Continuar ('+saved.drawn.length+' números sorteados)';els.welcomeOverlay.classList.remove('hidden')}else{els.welcomeOverlay.classList.remove('hidden')}
+state=saved&&saved.started?{...saved,paused:true}:blankState();
+escolhaCount=state.cartelasCount||1;
+if(state.started)renderAll();else{renderTicket();renderControls();renderSound()}
+
+if('serviceWorker' in navigator&&/^https?:$/.test(window.location.protocol)){navigator.serviceWorker.register('./sw.js').catch(()=>{})}
+})();
