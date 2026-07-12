@@ -9,9 +9,9 @@
   <meta name="apple-mobile-web-app-title" content="Bingo da Ivany"/>
   <title>Bingo da Ivany • versão 3</title>
   <link rel="manifest" href="manifest.webmanifest"/>
-  <link rel="apple-touch-icon" href="https://pszaavkjymlciemaoxdr.supabase.co/storage/v1/object/public/jarvis-assets/upload_1783849998051_ii4fsw7.png"/>
-  <link rel="icon" type="image/png" sizes="192x192" href="https://pszaavkjymlciemaoxdr.supabase.co/storage/v1/object/public/jarvis-assets/upload_1783849998051_ii4fsw7.png"/>
-<style>/* CSS INLINEADO - style.css */</style>
+  <link rel="apple-touch-icon" href="icon-180.png"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"/>
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
 <main class="app" aria-label="Bingo da Ivany">
@@ -85,7 +85,9 @@
 <div class="welcome-actions">
 <button class="btn btn-primary" id="welcomePlayBtn">🎱 Jogar agora</button>
 <button class="btn btn-secondary" id="resumeBtn" hidden>Continuar partida</button>
+<button class="btn btn-secondary" id="voiceTestBtn">🔈 Testar voz</button>
 </div>
+<p class="voice-hint" id="voiceHint" hidden>Não ouviu? Verifique o botão de silencioso na lateral do iPhone e aumente o volume. Depois toque em “Testar voz” de novo.</p>
 <p class="tiny-note">Sem dinheiro e sem pontuação: aqui vale apenas a diversão.</p>
 <noscript><p class="tiny-note" style="color:#b42347;font-weight:900">Este visualizador bloqueou o jogo. Abra o endereço publicado no Safari.</p></noscript>
 </section>
@@ -99,7 +101,6 @@
 </section>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<link rel="stylesheet" href="style.css">
 <script src="script.js" defer></script>
 </body>
 </html>
