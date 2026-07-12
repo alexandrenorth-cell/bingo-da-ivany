@@ -1,1 +1,105 @@
-REDACTED_SEE_FULL_RESTORE
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"/>
+  <meta name="theme-color" content="#5b2a86"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Bingo da Ivany"/>
+  <title>Bingo da Ivany • versão 3</title>
+  <link rel="manifest" href="manifest.webmanifest"/>
+  <link rel="apple-touch-icon" href="https://pszaavkjymlciemaoxdr.supabase.co/storage/v1/object/public/jarvis-assets/upload_1783849998051_ii4fsw7.png"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="https://pszaavkjymlciemaoxdr.supabase.co/storage/v1/object/public/jarvis-assets/upload_1783849998051_ii4fsw7.png"/>
+<style>/* CSS INLINEADO - style.css */</style>
+</head>
+<body>
+<main class="app" aria-label="Bingo da Ivany">
+<header class="topbar">
+<div class="brand"><div class="brand-badge" aria-hidden="true">🎱</div><div><h1>Bingo da Ivany</h1><small>90 bolas • 10+ jogadores</small></div></div>
+<button class="icon-btn" id="soundBtn" aria-label="Desligar voz">🔊</button>
+</header>
+<section class="hero" aria-live="polite">
+<div class="hero-row">
+<div class="current-ball-wrap"><div class="current-ball" id="currentBall">–</div><div class="shine" aria-hidden="true"></div></div>
+<div class="hero-copy"><h2 id="heroTitle">Pronta, Ivany?</h2><p id="heroMessage">Escolha quantas cartelas e comece a disputa.</p></div>
+</div>
+<div class="countdown-track" aria-hidden="true"><div class="countdown-bar" id="countdownBar"></div></div>
+<div class="stats">
+<div class="stat"><strong id="drawnCount">0 / 90</strong><span>Sorteados</span></div>
+<div class="stat"><strong id="markedCount">0 / 15</strong><span>Marcados</span></div>
+<div class="stat"><strong id="missingCount">5</strong><span id="missingLabel">P/ uma linha</span></div>
+</div>
+</section>
+<section class="section">
+<div class="section-head"><h2 class="section-title" id="ticketSectionTitle">Suas cartelas</h2><span class="ticket-code" id="ticketCode">Cartela #------</span></div>
+<div class="cartela-tabs" id="cartelaTabs"></div>
+<div class="cartela-swipe" id="cartelaSwipe"><div class="ticket" id="ticket" role="grid" aria-label="Cartela de bingo da Ivany"></div></div>
+<div class="milestones" aria-label="Objetivos da rodada">
+<div class="milestone" id="milestone1"><span class="m-icon">🌟</span>1 linha</div>
+<div class="milestone" id="milestone2"><span class="m-icon">🎉</span>2 linhas</div>
+<div class="milestone" id="milestone3"><span class="m-icon">👑</span>Bingo</div>
+</div>
+</section>
+<section class="section" id="playersSection">
+<div class="players-panel" id="playersPanel">
+<div class="players-header" id="playersHeader"><span>👥 Jogadores na disputa</span><span class="arrow">▼</span></div>
+<div id="playersList"></div>
+</div>
+</section>
+<section class="section">
+<div class="section-head"><h2 class="section-title">Últimos números</h2><span class="ticket-code" id="modeLabel">Aguardando início</span></div>
+<div class="history-row" id="historyRow" aria-label="Últimos números sorteados"><span class="history-empty">Os números sorteados aparecem aqui.</span></div>
+</section>
+</main>
+<div class="bottom-controls" aria-label="Controles do jogo">
+<button class="btn btn-secondary" id="newGameBtn">Novo jogo</button>
+<button class="btn btn-primary" id="mainBtn">Começar</button>
+</div>
+<div class="escolha-overlay hidden" id="escolhaOverlay">
+<div class="escolha-card">
+<h2>🎱 Quantas cartelas?</h2>
+<p>Ivany, com quantas cartelas você quer jogar esta partida?</p>
+<div class="escolha-btns">
+<button class="escolha-btn selected" data-count="1">1 cartela</button>
+<button class="escolha-btn" data-count="2">2 cartelas</button>
+<button class="escolha-btn" data-count="3">3 cartelas</button>
+</div>
+<div class="escolha-actions">
+<button class="btn btn-primary" id="escolhaAutoBtn">▶ Jogar automaticamente</button>
+<button class="btn btn-secondary" id="escolhaManualBtn">Eu prefiro sortear</button>
+</div>
+</div>
+</div>
+<div class="overlay hidden" id="welcomeOverlay">
+<section class="welcome-card" aria-labelledby="welcomeTitle">
+<div class="welcome-emoji" aria-hidden="true">🎱</div>
+<h2 id="welcomeTitle">Bingo da Ivany</h2>
+<div aria-hidden="true" style="font-size:11px;font-weight:900;color:#8b7399;margin-top:6px;letter-spacing:.08em">VERSÃO 3</div>
+<p class="lead">Dispute com 9 jogadores virtuais!<br>Escolha até 3 cartelas e conquiste o bingo.</p>
+<div class="howto">
+<div class="howto-item"><span class="howto-icon">👂</span><span>Ouça o número sorteado.</span></div>
+<div class="howto-item"><span class="howto-icon">👆</span><span>Toque nele quando aparecer na sua cartela.</span></div>
+<div class="howto-item"><span class="howto-icon">🏆</span><span>Complete linha, duas linhas e bingo antes dos rivais!</span></div>
+</div>
+<div class="welcome-actions">
+<button class="btn btn-primary" id="welcomePlayBtn">🎱 Jogar agora</button>
+<button class="btn btn-secondary" id="resumeBtn" hidden>Continuar partida</button>
+</div>
+<p class="tiny-note">Sem dinheiro e sem pontuação: aqui vale apenas a diversão.</p>
+<noscript><p class="tiny-note" style="color:#b42347;font-weight:900">Este visualizador bloqueou o jogo. Abra o endereço publicado no Safari.</p></noscript>
+</section>
+</div>
+<div class="celebration-overlay hidden" id="celebrationOverlay" role="dialog" aria-modal="true" aria-labelledby="celebrationTitle">
+<section class="celebration-card">
+<div class="celebration-icon" id="celebrationIcon">🌟</div>
+<h2 id="celebrationTitle">LINHA!</h2>
+<p id="celebrationText"></p>
+<div class="celebration-actions"><button class="btn btn-primary" id="celebrationContinueBtn">Continuar o jogo</button></div>
+</section>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<link rel="stylesheet" href="style.css">
+<script src="script.js" defer></script>
+</body>
+</html>
