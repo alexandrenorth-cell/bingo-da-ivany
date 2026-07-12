@@ -2,29 +2,35 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"/>
-  <meta name="theme-color" content="#5b2a86"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <meta name="theme-color" content="#1a0a2e"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="Bingo da Ivany"/>
   <title>Bingo da Ivany • versão 3</title>
   <link rel="manifest" href="manifest.webmanifest"/>
-  <link rel="apple-touch-icon" href="https://pszaavkjymlciemaoxdr.supabase.co/storage/v1/object/public/jarvis-assets/upload_1783849998051_ii4fsw7.png"/>
-  <link rel="icon" type="image/png" sizes="192x192" href="https://pszaavkjymlciemaoxdr.supabase.co/storage/v1/object/public/jarvis-assets/upload_1783849998051_ii4fsw7.png"/>
-<style>/* CSS INLINEADO - style.css */</style>
+  <link rel="apple-touch-icon" href="icon-180.png"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"/>
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
+<div class="sticky-ball-bar" id="stickyBar" hidden>
+<div class="sticky-ball" id="stickyBall">–</div>
+<span class="sticky-label" id="stickyLabel">Último número</span>
+<span class="pending-dot" id="stickyPending" hidden></span>
+</div>
 <main class="app" aria-label="Bingo da Ivany">
 <header class="topbar">
 <div class="brand"><div class="brand-badge" aria-hidden="true">🎱</div><div><h1>Bingo da Ivany</h1><small>90 bolas • 10+ jogadores</small></div></div>
 <button class="icon-btn" id="soundBtn" aria-label="Desligar voz">🔊</button>
 </header>
-<section class="hero" aria-live="polite">
+<section class="hero" id="hero">
 <div class="hero-row">
 <div class="current-ball-wrap"><div class="current-ball" id="currentBall">–</div><div class="shine" aria-hidden="true"></div></div>
-<div class="hero-copy"><h2 id="heroTitle">Pronta, Ivany?</h2><p id="heroMessage">Escolha quantas cartelas e comece a disputa.</p></div>
+<div class="hero-copy"><h2 id="heroTitle" aria-live="polite">Pronta, Ivany?</h2><p id="heroMessage">Escolha quantas cartelas e comece a disputa.</p></div>
 </div>
 <div class="countdown-track" aria-hidden="true"><div class="countdown-bar" id="countdownBar"></div></div>
+<button class="repeat-btn" id="repeatBtn" disabled>🔊 Repetir número</button>
 <div class="stats">
 <div class="stat"><strong id="drawnCount">0 / 90</strong><span>Sorteados</span></div>
 <div class="stat"><strong id="markedCount">0 / 15</strong><span>Marcados</span></div>
@@ -33,17 +39,21 @@
 </section>
 <section class="section">
 <div class="section-head"><h2 class="section-title" id="ticketSectionTitle">Suas cartelas</h2><span class="ticket-code" id="ticketCode">Cartela #------</span></div>
-<div class="cartela-tabs" id="cartelaTabs"></div>
-<div class="cartela-swipe" id="cartelaSwipe"><div class="ticket" id="ticket" role="grid" aria-label="Cartela de bingo da Ivany"></div></div>
+<div id="ticketsWrap"></div>
 <div class="milestones" aria-label="Objetivos da rodada">
 <div class="milestone" id="milestone1"><span class="m-icon">🌟</span>1 linha</div>
 <div class="milestone" id="milestone2"><span class="m-icon">🎉</span>2 linhas</div>
 <div class="milestone" id="milestone3"><span class="m-icon">👑</span>Bingo</div>
 </div>
 </section>
+<section class="section" aria-label="Velocidade da narração">
+<div class="section-head"><h2 class="section-title">Velocidade</h2><span class="ticket-code" id="speedValueLabel">Média</span></div>
+<input type="range" class="speed-slider" id="speedSlider" min="3" max="7" step="2" value="5" aria-label="Velocidade do sorteio: 3 segundos rápida, 5 média, 7 lenta"/>
+<div class="speed-marks" aria-hidden="true"><span>⚡ Rápida</span><span>Média</span><span>🐢 Lenta</span></div>
+</section>
 <section class="section" id="playersSection">
-<div class="players-panel" id="playersPanel">
-<div class="players-header" id="playersHeader"><span>👥 Jogadores na disputa</span><span class="arrow">▼</span></div>
+<div class="players-panel collapsed" id="playersPanel">
+<div class="players-header" id="playersHeader"><span id="playersSummary">👥 Jogadores na disputa</span><span class="arrow">▼</span></div>
 <div id="playersList"></div>
 </div>
 </section>
@@ -85,7 +95,10 @@
 <div class="welcome-actions">
 <button class="btn btn-primary" id="welcomePlayBtn">🎱 Jogar agora</button>
 <button class="btn btn-secondary" id="resumeBtn" hidden>Continuar partida</button>
+<button class="btn btn-secondary" id="voiceTestBtn">🔈 Testar voz</button>
 </div>
+<p class="voice-hint" id="voiceHint" hidden>Não ouviu? Verifique o botão de silencioso na lateral do iPhone e aumente o volume. Depois toque em “Testar voz” de novo.</p>
+<p class="victories-note" id="victoriesNote" hidden></p>
 <p class="tiny-note">Sem dinheiro e sem pontuação: aqui vale apenas a diversão.</p>
 <noscript><p class="tiny-note" style="color:#b42347;font-weight:900">Este visualizador bloqueou o jogo. Abra o endereço publicado no Safari.</p></noscript>
 </section>
@@ -99,7 +112,6 @@
 </section>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<link rel="stylesheet" href="style.css">
 <script src="script.js" defer></script>
 </body>
 </html>
