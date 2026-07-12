@@ -213,10 +213,41 @@ if(state.ivanyCartelas.length===1){els.ticketSectionTitle.textContent='Sua carte
 else if(state.ivanyCartelas.length>1){els.ticketSectionTitle.textContent='Suas cartelas';els.ticketCode.textContent=state.ivanyCartelas.length+' cartelas'}
 }
 
+// Reconstrói o DOM só quando as cartelas mudam; nos demais renders
+// atualiza classes/aria das células existentes (não reinicia animações CSS)
+let renderedTicketsSig='';
 function renderTicket(){
+const sig=state.ivanyCartelas.length?state.ivanyCartelas.map(c=>c.ticketId).join(','):'preview';
+if(sig!==renderedTicketsSig||!els.ticketsWrap.childElementCount){renderedTicketsSig=sig;rebuildTickets();return}
+updateTickets();
+}
+
+function rebuildTickets(){
 els.ticketsWrap.innerHTML='';
 if(!state.ivanyCartelas.length){const preview=generateTicket();els.ticketsWrap.appendChild(buildCartelaBlock(preview,0,true,[],null));return}
 state.ivanyCartelas.forEach((ct,i)=>{els.ticketsWrap.appendChild(buildCartelaBlock(ct.ticket,i,false,state.markedByCartela[i]||[],ct.ticketId))});
+}
+
+function updateTickets(){
+const drawnSet=new Set(state.drawn);
+state.ivanyCartelas.forEach((ct,i)=>{
+const block=els.ticketsWrap.querySelector('[data-cartela="'+i+'"]');if(!block)return;
+const marked=state.markedByCartela[i]||[];
+const headSpan=block.querySelector('.cartela-block-head span:first-child');
+if(headSpan){const pending=ct.ticket.flat().filter(n=>Number.isInteger(n)&&drawnSet.has(n)&&!marked.includes(n)).length;
+headSpan.innerHTML='Cartela '+(i+1)+(pending>0?' <span class="pending-dot">'+pending+'</span>':'')}
+const cells=block.querySelectorAll('.number-cell');
+const flat=ct.ticket.flat();
+cells.forEach((cell,idx)=>{
+const number=flat[idx];if(!Number.isInteger(number))return;
+const isMarked=marked.includes(number);
+const isAvailable=drawnSet.has(number)&&!isMarked;
+cell.classList.toggle('marked',isMarked);
+cell.classList.toggle('available',isAvailable);
+if(!isMarked)cell.classList.remove('just-marked','row-complete');
+cell.setAttribute('aria-label','Número '+number+(isMarked?', marcado':''));
+});
+});
 }
 
 function buildCartelaBlock(ticket,ci,preview,marked,ticketId){
