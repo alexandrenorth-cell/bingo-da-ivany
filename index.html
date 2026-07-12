@@ -331,7 +331,6 @@ const rows=completedRowsForTicket(vp.ticket,autoMarked);
 allPlayers.push({name:vp.name,marked:autoMarked.length,total:15,rows,isIvany:false});
 }
 allPlayers.sort((a,b)=>b.marked-a.marked);
-const bestMarked=allPlayers.length>0?allPlayers[0].marked:0;
 for(const p of allPlayers){
 const row=document.createElement('div');
 row.className='player-row'+(p.isIvany?' ivany':'')+(p.rows>=3?' won':'');
@@ -348,7 +347,6 @@ if(!state.drawn.length){const e=document.createElement('span');e.className='hist
 
 function renderStats(){
 const activeMarked=(state.markedByCartela[state.activeCartelaIndex]||[]).length;
-const totalMarked=state.markedByCartela.reduce((s,m)=>s+m.length,0);
 const missing=state.ivanyCartelas.length?missingForActiveCartela():{count:5,label:'P/ uma linha'};
 const sortedLabel=state.drawn.length===1?'1 número sorteado':state.drawn.length+' números sorteados';
 els.drawnCount.textContent=sortedLabel;
@@ -357,14 +355,12 @@ els.missingCount.textContent=String(missing.count);els.missingLabel.textContent=
 }
 
 function renderMilestones(){
-const claimed=state.conquistasClaimed;
 const hasIvanyOne=state.conquistas.some(c=>c.type==='one'&&c.playerName==='Ivany');
 const hasIvanyTwo=state.conquistas.some(c=>c.type==='two'&&c.playerName==='Ivany');
 const hasIvanyFull=state.conquistas.some(c=>c.type==='full'&&c.playerName==='Ivany');
 const hasOtherOne=state.conquistas.some(c=>c.type==='one'&&c.playerName!=='Ivany');
 const hasOtherTwo=state.conquistas.some(c=>c.type==='two'&&c.playerName!=='Ivany');
 const hasOtherFull=state.conquistas.some(c=>c.type==='full'&&c.playerName!=='Ivany');
-
 function setMs(el,isDone,isOther){el.classList.remove('done','claimed-by-other');if(isDone)el.classList.add('done');else if(isOther)el.classList.add('claimed-by-other')}
 setMs(els.milestone1,hasIvanyOne,hasOtherOne);
 setMs(els.milestone2,hasIvanyTwo,hasOtherTwo);
@@ -407,7 +403,6 @@ function confirmNewGame(){const hasProgress=state.drawn.length>0;if(hasProgress&
 
 window.BingoIvanyStart=(mode)=>{startNewGame(mode)};
 
-// Event listeners
 els.welcomePlayBtn.addEventListener('click',()=>{els.welcomeOverlay.classList.add('hidden');els.escolhaOverlay.classList.remove('hidden')});
 els.escolhaAutoBtn.addEventListener('click',()=>startNewGame('auto'));
 els.escolhaManualBtn.addEventListener('click',()=>startNewGame('manual'));
@@ -418,10 +413,8 @@ els.soundBtn.addEventListener('click',toggleSound);
 els.celebrationContinueBtn.addEventListener('click',closeCelebrationAndContinue);
 els.playersHeader.addEventListener('click',()=>els.playersPanel.classList.toggle('collapsed'));
 
-// Escolha de cartelas buttons
 document.querySelectorAll('.escolha-btn').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('.escolha-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');escolhaCount=parseInt(btn.dataset.count)})});
 
-// Swipe handling
 let touchStartX=0,touchStartY=0;
 els.cartelaSwipe.addEventListener('touchstart',e=>{touchStartX=e.touches[0].clientX;touchStartY=e.touches[0].clientY},{passive:true});
 els.cartelaSwipe.addEventListener('touchend',e=>{if(state.ivanyCartelas.length<=1)return;const dx=e.changedTouches[0].clientX-touchStartX;const dy=e.changedTouches[0].clientY-touchStartY;if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>50){if(dx<0&&state.activeCartelaIndex<state.ivanyCartelas.length-1)switchCartela(state.activeCartelaIndex+1);else if(dx>0&&state.activeCartelaIndex>0)switchCartela(state.activeCartelaIndex-1)}});
@@ -429,13 +422,11 @@ els.cartelaSwipe.addEventListener('touchend',e=>{if(state.ivanyCartelas.length<=
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&state.started){requestWakeLock();if(state.mode==='auto'&&!state.paused&&!state.conquistasClaimed.full){scheduleAutoDraw()}}else if(document.visibilityState==='hidden'&&state.mode==='auto'&&!state.paused){state.paused=true;clearTimers();saveState();renderControls()}});
 window.addEventListener('beforeunload',saveState);
 
-// Init
 const saved=loadSavedState();
 if(saved&&saved.started&&saved.drawn.length>0&&!saved.conquistasClaimed.full){els.resumeBtn.hidden=false;els.resumeBtn.textContent='Continuar ('+saved.drawn.length+' números sorteados)';els.welcomeOverlay.classList.remove('hidden')}else{els.welcomeOverlay.classList.remove('hidden')}
 state=saved&&saved.started?{...saved,paused:true}:blankState();
 escolhaCount=state.cartelasCount||1;
-if(state.started)renderAll();
-else{renderTicket();renderControls();renderSound()}
+if(state.started)renderAll();else{renderTicket();renderControls();renderSound()}
 
 if('serviceWorker' in navigator&&/^https?:$/.test(window.location.protocol)){navigator.serviceWorker.register('./sw.js').catch(()=>{})}
 })();
