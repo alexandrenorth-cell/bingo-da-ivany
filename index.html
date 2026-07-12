@@ -14,6 +14,11 @@
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
+<div class="sticky-ball-bar" id="stickyBar" hidden>
+<div class="sticky-ball" id="stickyBall">–</div>
+<span class="sticky-label" id="stickyLabel">Último número</span>
+<span class="pending-dot" id="stickyPending" hidden></span>
+</div>
 <main class="app" aria-label="Bingo da Ivany">
 <header class="topbar">
 <div class="brand"><div class="brand-badge" aria-hidden="true">🎱</div><div><h1>Bingo da Ivany</h1><small>90 bolas • 10+ jogadores</small></div></div>
@@ -93,6 +98,7 @@
 <button class="btn btn-secondary" id="voiceTestBtn">🔈 Testar voz</button>
 </div>
 <p class="voice-hint" id="voiceHint" hidden>Não ouviu? Verifique o botão de silencioso na lateral do iPhone e aumente o volume. Depois toque em “Testar voz” de novo.</p>
+<p class="victories-note" id="victoriesNote" hidden></p>
 <p class="tiny-note">Sem dinheiro e sem pontuação: aqui vale apenas a diversão.</p>
 <noscript><p class="tiny-note" style="color:#b42347;font-weight:900">Este visualizador bloqueou o jogo. Abra o endereço publicado no Safari.</p></noscript>
 </section>

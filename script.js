@@ -5,7 +5,7 @@ window.addEventListener('error',()=>{const n=document.querySelector('.tiny-note'
 
 const STORAGE_KEY='bingo-da-ivany-v3',DEFAULT_INTERVAL=5000,HINT_DELAY=1800,VIRTUAL_NAMES=['Ana','José','Maria','Carlos','Teresa','Paulo','Lúcia','João','Cida'];
 const els={
-soundBtn:document.getElementById('soundBtn'),currentBall:document.getElementById('currentBall'),heroTitle:document.getElementById('heroTitle'),heroMessage:document.getElementById('heroMessage'),countdownBar:document.getElementById('countdownBar'),drawnCount:document.getElementById('drawnCount'),markedCount:document.getElementById('markedCount'),missingCount:document.getElementById('missingCount'),missingLabel:document.getElementById('missingLabel'),ticketCode:document.getElementById('ticketCode'),ticketSectionTitle:document.getElementById('ticketSectionTitle'),ticketsWrap:document.getElementById('ticketsWrap'),speedSlider:document.getElementById('speedSlider'),speedValueLabel:document.getElementById('speedValueLabel'),repeatBtn:document.getElementById('repeatBtn'),playersSummary:document.getElementById('playersSummary'),historyRow:document.getElementById('historyRow'),modeLabel:document.getElementById('modeLabel'),milestone1:document.getElementById('milestone1'),milestone2:document.getElementById('milestone2'),milestone3:document.getElementById('milestone3'),newGameBtn:document.getElementById('newGameBtn'),mainBtn:document.getElementById('mainBtn'),welcomeOverlay:document.getElementById('welcomeOverlay'),welcomePlayBtn:document.getElementById('welcomePlayBtn'),resumeBtn:document.getElementById('resumeBtn'),escolhaOverlay:document.getElementById('escolhaOverlay'),escolhaAutoBtn:document.getElementById('escolhaAutoBtn'),escolhaManualBtn:document.getElementById('escolhaManualBtn'),celebrationOverlay:document.getElementById('celebrationOverlay'),celebrationIcon:document.getElementById('celebrationIcon'),celebrationTitle:document.getElementById('celebrationTitle'),celebrationText:document.getElementById('celebrationText'),celebrationContinueBtn:document.getElementById('celebrationContinueBtn'),playersPanel:document.getElementById('playersPanel'),playersHeader:document.getElementById('playersHeader'),playersList:document.getElementById('playersList'),toast:document.getElementById('toast'),voiceTestBtn:document.getElementById('voiceTestBtn'),voiceHint:document.getElementById('voiceHint')
+soundBtn:document.getElementById('soundBtn'),currentBall:document.getElementById('currentBall'),heroTitle:document.getElementById('heroTitle'),heroMessage:document.getElementById('heroMessage'),countdownBar:document.getElementById('countdownBar'),drawnCount:document.getElementById('drawnCount'),markedCount:document.getElementById('markedCount'),missingCount:document.getElementById('missingCount'),missingLabel:document.getElementById('missingLabel'),ticketCode:document.getElementById('ticketCode'),ticketSectionTitle:document.getElementById('ticketSectionTitle'),ticketsWrap:document.getElementById('ticketsWrap'),speedSlider:document.getElementById('speedSlider'),speedValueLabel:document.getElementById('speedValueLabel'),repeatBtn:document.getElementById('repeatBtn'),playersSummary:document.getElementById('playersSummary'),historyRow:document.getElementById('historyRow'),modeLabel:document.getElementById('modeLabel'),milestone1:document.getElementById('milestone1'),milestone2:document.getElementById('milestone2'),milestone3:document.getElementById('milestone3'),newGameBtn:document.getElementById('newGameBtn'),mainBtn:document.getElementById('mainBtn'),welcomeOverlay:document.getElementById('welcomeOverlay'),welcomePlayBtn:document.getElementById('welcomePlayBtn'),resumeBtn:document.getElementById('resumeBtn'),escolhaOverlay:document.getElementById('escolhaOverlay'),escolhaAutoBtn:document.getElementById('escolhaAutoBtn'),escolhaManualBtn:document.getElementById('escolhaManualBtn'),celebrationOverlay:document.getElementById('celebrationOverlay'),celebrationIcon:document.getElementById('celebrationIcon'),celebrationTitle:document.getElementById('celebrationTitle'),celebrationText:document.getElementById('celebrationText'),celebrationContinueBtn:document.getElementById('celebrationContinueBtn'),playersPanel:document.getElementById('playersPanel'),playersHeader:document.getElementById('playersHeader'),playersList:document.getElementById('playersList'),toast:document.getElementById('toast'),voiceTestBtn:document.getElementById('voiceTestBtn'),voiceHint:document.getElementById('voiceHint'),stickyBar:document.getElementById('stickyBar'),stickyBall:document.getElementById('stickyBall'),stickyPending:document.getElementById('stickyPending'),victoriesNote:document.getElementById('victoriesNote')
 };
 
 let state=blankState(),autoTimer=null,countdownFrame=null,hintTimer=null,nextDrawAt=0,toastTimer=null,wakeLock=null,escolhaCount=1,startLock=false;
@@ -74,15 +74,17 @@ else{const ns=winners.map(w=>w.playerName).join(' e ');title='Duas Linhas!';text
 else{icon='🌟';
 if(isIv){const ls=iw.map(w=>'Cartela '+w.cartelaLabel).join(' e ');title='LINHA!';text='Ivany completou uma linha na '+ls+'! Agora vamos buscar duas linhas.';voice='Linha! Muito bem, Ivany!'}
 else{const ns=winners.map(w=>w.playerName).join(' e ');title='Linha!';text=ns+' '+(winners.length>1?'completaram':'completou')+' uma linha! A disputa continua.';voice=ns+' '+(winners.length>1?'completaram':'completou')+' uma linha!'}}
+if(isB&&isIv)addVictory();
 els.celebrationIcon.textContent=icon;els.celebrationTitle.textContent=title;els.celebrationText.textContent=text;
 els.celebrationContinueBtn.textContent=isB?'Jogar novamente':'Continuar o jogo';
-els.celebrationOverlay.dataset.isBingo=isB?'1':'0';els.celebrationOverlay.classList.remove('hidden');
+els.celebrationOverlay.dataset.isBingo=isB?'1':'0';
+withViewTransition(()=>els.celebrationOverlay.classList.remove('hidden'));
 renderMilestones();renderPlayers();renderStats();
-speak(voice);launchConfetti(isB?140:isIv?65:35);
+speak(voice);launchConfetti(isB?140:isIv?65:35,isB);
 }
 
 function closeCelebrationAndContinue(){
-const isB=els.celebrationOverlay.dataset.isBingo==='1';els.celebrationOverlay.classList.add('hidden');
+const isB=els.celebrationOverlay.dataset.isBingo==='1';withViewTransition(()=>els.celebrationOverlay.classList.add('hidden'));
 if(isB){startNewGame(state.mode||'auto');return}
 if(state.mode==='auto'){state.paused=false;scheduleAutoDraw()}renderAll();saveState();
 }
@@ -142,7 +144,7 @@ renderAll();saveState();requestWakeLock();showToast('Partida retomada');
 
 function drawNext(){
 if(!state.started||state.drawPile.length===0||state.conquistasClaimed.full)return;
-clearHint();const number=state.drawPile.shift();state.drawn.push(number);animateCurrentBall(number);speak('Número '+number);
+clearHint();const number=state.drawPile.shift();state.drawn.push(number);animateCurrentBall(number);speak(numberAnnouncement(number));
 const onAnyCartela=state.ivanyCartelas.some(ct=>ct.ticket.flat().filter(Number.isInteger).includes(number));
 els.heroTitle.textContent='Número '+number;
 els.heroMessage.textContent=onAnyCartela?'Ele está em uma das suas cartelas. Procure o brilho!':encouragementMessage();
@@ -181,7 +183,23 @@ if(marked.includes(number)){showToast('Esse já está marcado ✅');return}
 state.markedByCartela[ci]=[...marked,number];
 speak(randomFrom(['Boa!','Achou!','Mandou bem!','Na cartela!']));showToast(randomFrom(['Boa, Ivany! ✨','Achou! 🎯','Muito bem! 🌟','Número marcado! ✅']));
 renderAll();saveState();
+animateMark(ci,number);
 checkAllConquistas(false); // com marcação manual, a conquista dela nasce no toque
+}
+
+// Carimbo na célula recém-marcada + brilho na linha se ela acabou de completar
+function animateMark(ci,number){
+const block=els.ticketsWrap.querySelector('[data-cartela="'+ci+'"]');if(!block)return;
+const cells=[...block.querySelectorAll('.number-cell')];
+const cell=cells.find(el=>el.textContent===String(number));
+if(cell)cell.classList.add('just-marked');
+const t=state.ivanyCartelas[ci]&&state.ivanyCartelas[ci].ticket;if(!t)return;
+const row=t.find(r=>r.includes(number));if(!row)return;
+const nums=row.filter(Number.isInteger);
+const marked=state.markedByCartela[ci]||[];
+if(nums.every(n=>marked.includes(n))){
+nums.forEach(n=>{const c=cells.find(el=>el.textContent===String(n));if(c)c.classList.add('row-complete')});
+}
 }
 
 function renderAll(){
@@ -189,6 +207,7 @@ renderTicket();renderHistory();renderStats();renderMilestones();renderControls()
 const last=state.drawn[state.drawn.length-1];const hasLast=Number.isInteger(last);
 els.currentBall.textContent=hasLast?last:'–';els.currentBall.style.color=hasLast?ballColor(last):'';
 els.repeatBtn.disabled=!hasLast;
+updateStickyBar();
 els.playersPanel.classList.toggle('collapsed',!state.playersOpen);
 if(state.ivanyCartelas.length===1){els.ticketSectionTitle.textContent='Sua cartela';els.ticketCode.textContent='Cartela #'+state.ivanyCartelas[0].ticketId}
 else if(state.ivanyCartelas.length>1){els.ticketSectionTitle.textContent='Suas cartelas';els.ticketCode.textContent=state.ivanyCartelas.length+' cartelas'}
@@ -292,7 +311,7 @@ function renderSound(){els.soundBtn.textContent=state.sound?'🔊':'🔇';els.so
 
 function renderSpeed(){const s=Math.round((state.drawInterval||DEFAULT_INTERVAL)/1000);els.speedSlider.value=String(s);els.speedValueLabel.textContent=s===3?'⚡ Rápida (3s)':s===7?'🐢 Lenta (7s)':'Média (5s)'}
 
-function animateCurrentBall(number){els.currentBall.textContent=String(number);els.currentBall.style.color=ballColor(number);els.currentBall.classList.remove('pop');void els.currentBall.offsetWidth;els.currentBall.classList.add('pop')}
+function animateCurrentBall(number){els.currentBall.textContent=String(number);els.currentBall.style.color=ballColor(number);const wrap=els.currentBall.parentElement;els.currentBall.classList.remove('pop');wrap.classList.remove('spin');void els.currentBall.offsetWidth;els.currentBall.classList.add('pop');wrap.classList.add('spin')}
 
 function highlightAvailable(number){
 const cells=[...els.ticketsWrap.querySelectorAll('.number-cell')].filter(el=>el.textContent===String(number)&&!el.classList.contains('marked'));
@@ -352,11 +371,58 @@ if(attempt===0)speakAttempt(text,o,1);else playDing();
 
 function showToast(m){if(toastTimer)window.clearTimeout(toastTimer);els.toast.textContent=m;els.toast.classList.add('show');toastTimer=window.setTimeout(()=>els.toast.classList.remove('show'),1850)}
 
-function launchConfetti(amount){const palette=['#f6bd4b','#ed5d72','#7b3fb3','#30aa8c','#4c8ce8','#ff8a4c'];for(let i=0;i<amount;i++){const piece=document.createElement('div');piece.className='confetti';piece.style.left=Math.random()*100+'vw';piece.style.background=randomFrom(palette);piece.style.setProperty('--fall',(2.1+Math.random()*2.1)+'s');piece.style.setProperty('--drift',(-120+Math.random()*240)+'px');piece.style.setProperty('--spin',(360+Math.random()*1080)+'deg');piece.style.animationDelay=(Math.random()*.65)+'s';piece.style.width=(7+Math.random()*7)+'px';piece.style.height=(10+Math.random()*12)+'px';document.body.appendChild(piece);window.setTimeout(()=>piece.remove(),5000)}}
+function launchConfetti(amount,burst){
+if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+const palette=['#f6bd4b','#ed5d72','#7b3fb3','#30aa8c','#4c8ce8','#ff8a4c'];
+for(let i=0;i<amount;i++){
+const piece=document.createElement('div');piece.className='confetti'+(burst?' burst':'');
+piece.style.background=randomFrom(palette);
+const shape=Math.random();
+if(shape<.33)piece.style.borderRadius='50%';else if(shape<.55){piece.style.width='5px';piece.style.height='18px';piece.style.borderRadius='999px'}
+if(!piece.style.width){piece.style.width=(7+Math.random()*7)+'px';piece.style.height=(10+Math.random()*12)+'px'}
+piece.style.setProperty('--fall',(2.1+Math.random()*2.1)+'s');
+piece.style.setProperty('--spin',(360+Math.random()*1080)+'deg');
+if(burst){
+piece.style.setProperty('--bx',(-42+Math.random()*84)+'vw');
+piece.style.setProperty('--by',(-34+Math.random()*22)+'vh');
+piece.style.animationDelay=(Math.random()*.25)+'s';
+}else{
+piece.style.left=Math.random()*100+'vw';
+piece.style.setProperty('--drift',(-120+Math.random()*240)+'px');
+piece.style.animationDelay=(Math.random()*.65)+'s';
+}
+document.body.appendChild(piece);window.setTimeout(()=>piece.remove(),5200);
+}
+}
 
 function ballColor(n){if(n<=9)return'#e55373';if(n<=19)return'#e77b39';if(n<=29)return'#c68c12';if(n<=39)return'#319c63';if(n<=49)return'#238f91';if(n<=59)return'#347dbf';if(n<=69)return'#5563c1';if(n<=79)return'#7b3fb3';return'#b6428b'}
 
 function encouragementMessage(){return randomFrom(['Esse passou voando. O próximo pode ser seu!','A cartela está esquentando.','Olho vivo, Ivany. A sorte está passeando.','Seguimos firmes. Tem número bom vindo aí.','Nada por aqui desta vez. Vamos ao próximo!'])}
+
+// Narração estilo bingo real: "cinco... dois... cinquenta e dois!" (só nas velocidades 5s/7s)
+function numberAnnouncement(n){
+if(state.drawInterval<=3000||n<10)return 'Número '+n;
+return Math.floor(n/10)+', '+(n%10)+'... '+n+'!';
+}
+
+function getVictories(){try{return parseInt(localStorage.getItem('bingo-ivany-victories')||'0',10)||0}catch(e){return 0}}
+function addVictory(){try{localStorage.setItem('bingo-ivany-victories',String(getVictories()+1))}catch(e){}}
+
+function withViewTransition(fn){if(document.startViewTransition){document.startViewTransition(fn)}else{fn()}}
+
+let heroVisible=true;
+function updateStickyBar(){
+const last=state.drawn[state.drawn.length-1];
+const show=!heroVisible&&state.started&&Number.isInteger(last);
+els.stickyBar.hidden=!show;
+if(!show)return;
+els.stickyBall.textContent=String(last);els.stickyBall.style.color=ballColor(last);
+const drawnSet=new Set(state.drawn);
+let pending=0;
+state.ivanyCartelas.forEach((ct,i)=>{const marked=state.markedByCartela[i]||[];pending+=ct.ticket.flat().filter(n=>Number.isInteger(n)&&drawnSet.has(n)&&!marked.includes(n)).length});
+els.stickyPending.hidden=pending===0;
+if(pending>0)els.stickyPending.textContent=pending+' p/ marcar';
+}
 
 function confirmNewGame(){const hasProgress=state.drawn.length>0;if(hasProgress&&!window.confirm('Começar um novo jogo? A partida atual será apagada.'))return;els.escolhaOverlay.classList.remove('hidden')}
 
@@ -377,6 +443,14 @@ els.speedSlider.addEventListener('input',()=>{const s=parseInt(els.speedSlider.v
 els.speedSlider.addEventListener('change',()=>{const s=parseInt(els.speedSlider.value,10);state.drawInterval=s*1000;renderSpeed();saveState();showToast(s===3?'Velocidade rápida ⚡':s===7?'Velocidade lenta 🐢':'Velocidade média');if(state.started&&state.mode==='auto'&&!state.paused&&!state.conquistasClaimed.full)scheduleAutoDraw()});
 
 document.querySelectorAll('.escolha-btn').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('.escolha-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');escolhaCount=parseInt(btn.dataset.count)})});
+
+els.stickyBar.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
+if('IntersectionObserver' in window){
+new IntersectionObserver(entries=>{heroVisible=entries[0].isIntersecting;updateStickyBar()},{threshold:0}).observe(document.getElementById('hero'));
+}else{heroVisible=false}
+
+const victories=getVictories();
+if(victories>0){els.victoriesNote.hidden=false;els.victoriesNote.textContent='🏆 Você já fez '+victories+(victories>1?' bingos!':' bingo!')}
 
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){resetSpeech()}if(document.visibilityState==='visible'&&state.started){requestWakeLock();if(state.mode==='auto'&&!state.paused&&!state.conquistasClaimed.full){scheduleAutoDraw()}}else if(document.visibilityState==='hidden'&&state.mode==='auto'&&!state.paused){state.paused=true;clearTimers();saveState();renderControls()}});
 window.addEventListener('beforeunload',saveState);

@@ -20,6 +20,10 @@ button{font:inherit}
 .current-ball-wrap{position:relative;width:112px;height:112px;margin:0 auto}
 .current-ball{width:112px;height:112px;border-radius:50%;display:grid;place-items:center;background:#fff;color:var(--plum);border:7px solid rgba(255,255,255,.28);background-clip:padding-box;box-shadow:inset 0 -9px 18px rgba(91,42,134,.10),0 14px 28px rgba(0,0,0,.38);font-size:52px;font-weight:950;letter-spacing:-.06em;transform:translateZ(0)}
 .current-ball.pop{animation:ballPop .55s cubic-bezier(.2,.85,.25,1.35)}
+.current-ball-wrap.spin{animation:globeSpin .5s ease}
+@keyframes globeSpin{from{transform:rotate(-150deg) scale(.9)}
+to{transform:rotate(0) scale(1)}
+}
 @keyframes ballPop{0%{transform:scale(.45) rotate(-16deg);opacity:0}
 72%{transform:scale(1.08) rotate(3deg);opacity:1}
 100%{transform:scale(1) rotate(0)}
@@ -53,6 +57,15 @@ button{font:inherit}
 .number-cell.marked{color:#fff;background:linear-gradient(145deg,#2fb28f,#238a75);box-shadow:inset 0 -5px 10px rgba(0,0,0,.08),0 6px 13px rgba(0,0,0,.28);transform:scale(.97)}
 .number-cell.marked::after{content:"✓";position:absolute;right:3px;top:1px;font-size:10px;width:15px;height:15px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.24)}
 .number-cell.wrong{animation:shake .35s ease}
+.number-cell.just-marked{animation:stampIn .45s cubic-bezier(.2,.9,.3,1.4)}
+.number-cell.just-marked::before{content:"";position:absolute;inset:-6px;border-radius:14px;border:3px solid rgba(246,189,75,.9);animation:ringOut .55s ease-out forwards;pointer-events:none}
+@keyframes stampIn{0%{transform:scale(1.35)}
+60%{transform:scale(.9)}
+100%{transform:scale(.97)}
+}
+@keyframes ringOut{from{opacity:1;transform:scale(.82)}
+to{opacity:0;transform:scale(1.28)}
+}
 @keyframes gentlePulse{0%,100%{transform:scale(1)}
 50%{transform:scale(1.045)}
 }
@@ -141,6 +154,17 @@ to{opacity:1;transform:translateY(0) scale(1)}
 .confetti{position:fixed;z-index:150;width:10px;height:16px;top:-24px;border-radius:3px;pointer-events:none;animation:confettiFall var(--fall,2.8s) linear forwards}
 @keyframes confettiFall{to{transform:translate3d(var(--drift,0px),110vh,0) rotate(var(--spin,720deg));opacity:.95}
 }
+.confetti.burst{top:38vh;left:50vw;animation:confettiBurst var(--fall,3s) cubic-bezier(.15,.6,.4,1) forwards}
+@keyframes confettiBurst{0%{transform:translate3d(0,0,0) rotate(0);opacity:1}
+35%{transform:translate3d(var(--bx,0px),var(--by,-20vh),0) rotate(var(--spin,360deg));opacity:1}
+100%{transform:translate3d(calc(var(--bx,0px)*1.3),80vh,0) rotate(calc(var(--spin,360deg)*2));opacity:.9}
+}
+.sticky-ball-bar{position:fixed;z-index:30;top:0;left:50%;transform:translateX(-50%);width:min(100%,680px);display:flex;align-items:center;gap:10px;padding:calc(var(--safe-top) + 6px) 12px 8px;background:rgba(26,10,46,.92);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.10);cursor:pointer;transition:opacity .25s ease,transform .25s ease}
+@starting-style{.sticky-ball-bar{opacity:0;transform:translateX(-50%) translateY(-14px)}
+}
+.sticky-ball{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:#fff;color:var(--plum);font-size:22px;font-weight:950;box-shadow:inset 0 -4px 8px rgba(91,42,134,.12),0 5px 12px rgba(0,0,0,.35);flex:0 0 auto}
+.sticky-label{font-size:15px;font-weight:850;color:var(--ink);flex:1 1 auto}
+.victories-note{margin:12px auto 0;width:max-content;max-width:100%;padding:8px 14px;border-radius:999px;background:linear-gradient(145deg,#fff3d6,#ffe9b8);border:1px solid rgba(246,189,75,.6);color:#7a4a12;font-size:14px;font-weight:900}
 .row-complete{animation:rowGlow 1s ease 2}
 @keyframes rowGlow{0%,100%{filter:none}
 50%{filter:drop-shadow(0 0 8px rgba(246,189,75,.9))}
