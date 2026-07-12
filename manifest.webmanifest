@@ -11,18 +11,18 @@
   "theme_color": "#5b2a86",
   "icons": [
     {
-      "src": "bingo_ivany_icon_180.png",
+      "src": "https://pszaavkjymlciemaoxdr.supabase.co/storage/v1/object/public/jarvis-assets/upload_1783849998051_ii4fsw7.png",
       "sizes": "180x180",
       "type": "image/png"
     },
     {
-      "src": "bingo_ivany_icon_192.png",
+      "src": "https://pszaavkjymlciemaoxdr.supabase.co/storage/v1/object/public/jarvis-assets/upload_1783849998051_ii4fsw7.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "bingo_ivany_icon_512.png",
+      "src": "https://pszaavkjymlciemaoxdr.supabase.co/storage/v1/object/public/jarvis-assets/upload_1783849998051_ii4fsw7.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
